@@ -1,0 +1,86 @@
+#include <SoftwareSerial.h>
+#include <LiquidCrystal.h>
+
+LiquidCrystal LCD(8, 9, 4, 5, 6, 7); 
+
+SoftwareSerial gpsSerial(10, 11); // RX, TX (TX not used)
+const int sentenceSize = 80;
+
+char sentence[sentenceSize];
+void setup()
+{
+   LCD.begin(16, 2);
+   LCD.setCursor(0,0);
+     LCD.print("the name of god");
+     delay(2000);
+     LCD.setCursor(0,1);
+     LCD.print("Made by F.Ahmadi");
+     delay(4000);
+     LCD.clear();
+  Serial.begin(9600);
+  gpsSerial.begin(9600);
+ 
+}
+
+void loop()
+{
+  static int i = 0;
+  if (gpsSerial.available())
+  {
+    char ch = gpsSerial.read();
+    if (ch != '\n' && i < sentenceSize)
+    {
+      sentence[i] = ch;
+      i++;
+    }
+    else
+    {
+     sentence[i] = '\0';
+     i = 0;
+     displayGPS();
+    }
+  }
+}
+
+void displayGPS()
+{
+  char field[20];
+  getField(field, 0);
+  if (strcmp(field, "$GPRMC") == 0)
+  {
+    LCD.setCursor(0,0);
+     LCD.print("Lat: ");
+    getField(field, 3);  // number
+    LCD.print(field);
+    getField(field, 4); // N/S
+    LCD.print(field);
+    LCD.setCursor(0,1);
+    LCD.print("Lon:");
+    getField(field, 5);  // number
+    LCD.print(field);
+    getField(field, 6);  // E/W
+   LCD.println(field);
+  }
+}
+
+void getField(char* buffer, int index)
+{
+  int sentencePos = 0;
+  int fieldPos = 0;
+  int commaCount = 0;
+  while (sentencePos < sentenceSize)
+  {
+    if (sentence[sentencePos] == ',')
+    {
+      commaCount ++;
+      sentencePos ++;
+    }
+    if (commaCount == index)
+    {
+      buffer[fieldPos] = sentence[sentencePos];
+      fieldPos ++;
+    }
+    sentencePos ++;
+  }
+  buffer[fieldPos] = '\0';
+}
